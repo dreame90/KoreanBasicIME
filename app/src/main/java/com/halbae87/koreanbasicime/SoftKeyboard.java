@@ -90,6 +90,10 @@ public class SoftKeyboard extends InputMethodService
     
     private LatinKeyboard mSymbolsKeyboard;
     private LatinKeyboard mSymbolsShiftedKeyboard;
+    //Accommodate different symbols for Korean.  At the moment just changing the "ABC" key to the "한글"
+    private LatinKeyboard mSymbolsKeyboardKorean;
+    private LatinKeyboard mSymbolsShiftedKeyboardKorean;
+
     private LatinKeyboard mQwertyKeyboard;
 
     // special key definitions.
@@ -139,6 +143,9 @@ public class SoftKeyboard extends InputMethodService
         mQwertyKeyboard = new LatinKeyboard(this, R.xml.qwerty);
         mSymbolsKeyboard = new LatinKeyboard(this, R.xml.symbols);
         mSymbolsShiftedKeyboard = new LatinKeyboard(this, R.xml.symbols_shift);
+        //Accomodate differnt symbols for Korean.  At the moment just changing the "ABC" key to the "한글"
+        mSymbolsKeyboardKorean = new LatinKeyboard(this, R.xml.symbols_korean);
+        mSymbolsShiftedKeyboardKorean = new LatinKeyboard(this, R.xml.symbols_shift_korean);
         mKoreanKeyboard = new LatinKeyboard(this, R.xml.korean);
         mKoreanShiftedKeyboard = new LatinKeyboard(this, R.xml.korean_shifted);
         mBackupKeyboard = null; 
@@ -712,6 +719,10 @@ public class SoftKeyboard extends InputMethodService
 	        			current = mKoreanKeyboard;
 	        		}
 	        		mInputView.setKeyboard(current);
+                    // looks at the ime options given by the current editor, to set the
+                    //appropriate label on the keyboard's enter key (if it has one).
+                    EditorInfo currentEditorInputInfo =  getCurrentInputEditorInfo();
+                    ((LatinKeyboard)(current)).setImeOptions(getResources(), currentEditorInputInfo.imeOptions);
 	                if (mComposing.length() > 0)
 	                {
 	                	commitTyped(getCurrentInputConnection());
@@ -724,13 +735,13 @@ public class SoftKeyboard extends InputMethodService
         		}
         		else
         		{
-        			 // Log.v(TAG, "   mNoKorean is ture. ignore the toggle key");
+        			 // Log.v(TAG, "   mNoKorean is true. ignore the toggle key");
         		}
         	}
         } else if (primaryCode == Keyboard.KEYCODE_MODE_CHANGE
                 && mInputView != null) {
             Keyboard current = mInputView.getKeyboard();
-            if (current == mSymbolsKeyboard || current == mSymbolsShiftedKeyboard) {
+            if ((current == mSymbolsKeyboard) || (current == mSymbolsShiftedKeyboard)|| (current == mSymbolsKeyboardKorean) || (current == mSymbolsShiftedKeyboardKorean)) {//Added in Korean symbols keyboard
             	if (mBackupKeyboard != null)
             		current =  mBackupKeyboard;
             	else 
@@ -741,7 +752,7 @@ public class SoftKeyboard extends InputMethodService
                  	kauto.ToggleMode();
             } else {
             	mBackupKeyboard = (LatinKeyboard) current;
-                current = mSymbolsKeyboard;
+                current = (kauto.IsKoreanMode()) ? mSymbolsKeyboardKorean:mSymbolsKeyboard; //Added in Korean symbols keyboard
                 // need to submit current composition string
                 if (mComposing.length() > 0)
                 {
@@ -751,7 +762,11 @@ public class SoftKeyboard extends InputMethodService
             		kauto.FinishAutomataWithoutInput();
             }
             mInputView.setKeyboard(current);
-            if (current == mSymbolsKeyboard) {
+            // looks at the ime options given by the current editor, to set the
+            //appropriate label on the keyboard's enter key (if it has one).
+            EditorInfo currentEditorInputInfo =  getCurrentInputEditorInfo();
+            ((LatinKeyboard)(current)).setImeOptions(getResources(), currentEditorInputInfo.imeOptions);
+            if ((current == mSymbolsKeyboard) || (current == mSymbolsKeyboardKorean )){//Added in Korean symbols keyboard
                 current.setShifted(false);
             }
         } else {
@@ -869,8 +884,10 @@ public class SoftKeyboard extends InputMethodService
         if (mInputView == null) {
             return;
         }
-        
+
         Keyboard currentKeyboard = mInputView.getKeyboard();
+        Keyboard newKeyboard = currentKeyboard;
+
         if (mQwertyKeyboard == currentKeyboard) {
             // Alphabet keyboard
             checkToggleCapsLock();
@@ -883,6 +900,7 @@ public class SoftKeyboard extends InputMethodService
         	mKoreanKeyboard.setShifted(true);
             mInputView.setKeyboard(mKoreanShiftedKeyboard);
             mKoreanShiftedKeyboard.setShifted(true);
+            newKeyboard = mKoreanShiftedKeyboard;
         }
         else if (currentKeyboard == mKoreanShiftedKeyboard)
         {
@@ -890,17 +908,42 @@ public class SoftKeyboard extends InputMethodService
         	mKoreanShiftedKeyboard.setShifted(false);
             mInputView.setKeyboard(mKoreanKeyboard);
             mKoreanKeyboard.setShifted(false);
+            newKeyboard = mKoreanKeyboard;
+
         }
         // end of Korean keyboard care..
         else if (currentKeyboard == mSymbolsKeyboard) {
             mSymbolsKeyboard.setShifted(true);
             mInputView.setKeyboard(mSymbolsShiftedKeyboard);
             mSymbolsShiftedKeyboard.setShifted(true);
+            newKeyboard = mSymbolsShiftedKeyboard;
+
         } else if (currentKeyboard == mSymbolsShiftedKeyboard) {
             mSymbolsShiftedKeyboard.setShifted(false);
             mInputView.setKeyboard(mSymbolsKeyboard);
             mSymbolsKeyboard.setShifted(false);
+            newKeyboard = mSymbolsKeyboard;
+
         }
+        // Add check for Korean symbol keyboards
+        else if (currentKeyboard == mSymbolsKeyboardKorean) {
+            mSymbolsKeyboardKorean.setShifted(true);
+            mInputView.setKeyboard(mSymbolsShiftedKeyboardKorean);
+            mSymbolsShiftedKeyboardKorean.setShifted(true);
+            newKeyboard = mSymbolsShiftedKeyboardKorean;
+
+        } else if (currentKeyboard == mSymbolsShiftedKeyboardKorean) {
+            mSymbolsShiftedKeyboardKorean.setShifted(false);
+            mInputView.setKeyboard(mSymbolsKeyboardKorean);
+            mSymbolsKeyboardKorean.setShifted(false);
+            newKeyboard = mSymbolsKeyboardKorean;
+
+        }
+        // looks at the ime options given by the current editor, to set the
+        //appropriate label on the keyboard's enter key (if it has one).
+        EditorInfo currentEditorInputInfo =  getCurrentInputEditorInfo();
+        ((LatinKeyboard)(newKeyboard)).setImeOptions(getResources(), currentEditorInputInfo.imeOptions);
+
     }
     
     private void handleCharacter(int primaryCode, int[] keyCodes) {
