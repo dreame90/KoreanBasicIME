@@ -37,6 +37,7 @@ import android.view.inputmethod.InputMethodManager;
 
 import java.util.ArrayList;
 import java.util.List;
+import android.media.AudioManager;
 
 
 /*
@@ -681,7 +682,11 @@ public class SoftKeyboard extends InputMethodService
     // Implementation of KeyboardViewListener
 
     public void onKey(int primaryCode, int[] keyCodes) {
-    	 // Log.v(TAG, "onKey - primaryCode = " + primaryCode);
+
+        AudioManager am = (AudioManager)getSystemService(AUDIO_SERVICE);
+        am.playSoundEffect(AudioManager.FX_KEYPRESS_STANDARD);
+
+        // Log.v(TAG, "onKey - primaryCode = " + primaryCode);
     	if (isWordSeparator(primaryCode)) {
     		 // Log.v(TAG, " -- separator = [" + (char) primaryCode + "]");
             // Handle separator
@@ -772,6 +777,7 @@ public class SoftKeyboard extends InputMethodService
         } else {
             handleCharacter(primaryCode, keyCodes);
         }
+
     }
 
     public void onText(CharSequence text) {
